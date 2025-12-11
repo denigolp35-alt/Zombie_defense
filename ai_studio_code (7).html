@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zombie Defense: Fixed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* CSS RESET & VARS */
+        :root { --bg: #2d2d2d; --panel: #5d4037; --border-light: #8d6e63; --border-dark: #3e2723; --accent: #d32f2f; --gold: #ffd700; --text-color: #fff; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; user-select: none; color: var(--text-color); image-rendering: pixelated; }
+        
+        /* TELAS */
+        #menu-screen, #game-screen { position: absolute; width: 100%; height: 100%; }
+        #menu-screen { background: #1a1a1a; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 20px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        #game-screen { display: none; }
+
+        /* UI */
+        .pixel-box { background: var(--panel); border-top: 4px solid var(--border-light); border-left: 4px solid var(--border-light); border-right: 4px solid var(--border-dark); border-bottom: 4px solid var(--border-dark); box-shadow: 0 4px 0 #000; }
+        h1 { font-size: 30px; color: #8bc34a; text-transform: uppercase; margin-bottom: 30px; text-align: center; text-shadow: 4px 4px 0px #000; line-height: 1.5; }
+        small { font-size: 12px; color: #aed581; display: block; margin-top: 10px; }
+        .btn-main { font-family: 'Press Start 2P', cursive; padding: 15px 20px; font-size: 12px; background: #689f38; color: white; border: none; cursor: pointer; margin: 10px; border-top: 4px solid #99d066; border-left: 4px solid #99d066; border-right: 4px solid #33691e; border-bottom: 4px solid #33691e; box-shadow: 0 4px 0 #000; position: relative; }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 0 0 #000; border-top: 4px solid #33691e; }
+        .btn-sec { background: #5d4037; border-color: #8d6e63 #3e2723 #3e2723 #8d6e63; }
+        .btn-danger { background: #d32f2f; border-color: #ff6666 #8b0000 #8b0000 #ff6666; }
+
+        /* HUD */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .top-bar { background: rgba(0,0,0,0.6); padding: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; pointer-events: auto; border-bottom: 4px solid #000; flex-wrap: wrap; font-size: 10px; }
+        .res-box { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: #222; border: 2px solid #555; border-radius: 4px; }
+        .auto-container { display: flex; align-items: center; background: #222; border: 2px solid #555; border-radius: 4px; }
+        .auto-wave-box { display: flex; align-items: center; gap: 5px; font-size: 8px; cursor: pointer; padding: 5px; background: #333; height: 100%; }
+        .auto-wave-box input { cursor: pointer; margin: 0; }
+        .timer-display { background: #000; color: var(--accent); padding: 5px; min-width: 40px; text-align: center; font-size: 10px;}
+        .bottom-bar { padding: 10px; display: flex; justify-content: center; gap: 10px; pointer-events: auto; min-height: 130px; align-items: flex-end; overflow-x: auto; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+        
+        /* CARDS */
+        .troop-card { background: #4e342e; width: 70px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; flex-shrink: 0; border: 2px solid #3e2723; border-radius: 6px; box-shadow: 0 4px 0 rgba(0,0,0,0.5); }
+        .troop-card.selected { background: #6d4c41; border-color: gold; transform: translateY(-10px); }
+        .troop-icon { font-size: 30px; margin-bottom: 5px; filter: drop-shadow(2px 2px 0 #000); }
+        .troop-name { font-size: 8px; text-align: center; color: #d7ccc8; width: 100%; overflow: hidden; white-space: nowrap; }
+        
+        #btn-wave { position: absolute; bottom: 160px; right: 20px; width: 80px; height: 80px; background: #d32f2f; color: white; font-weight: bold; font-size: 10px; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; text-align: center; border: 4px solid #fff; box-shadow: 4px 4px 0 #000; border-radius: 10px; image-rendering: pixelated; }
+        #btn-wave:hover { transform: scale(1.05); }
+
+        /* MODAIS */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; display: none; justify-content: center; align-items: center; }
+        .modal-content { background: var(--panel); width: 90%; max-width: 600px; max-height: 80vh; padding: 20px; display: flex; flex-direction: column; border: 4px solid #000; box-shadow: 10px 10px 0 rgba(0,0,0,0.5); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; overflow-y: auto; padding: 10px; }
+        .inv-card { background: #3e2723; padding: 10px; text-align: center; cursor: pointer; border: 2px solid #5d4037; border-radius: 4px; position: relative; }
+        .inv-card:hover { background: #4e342e; }
+        .inv-card.equipped { border-color: #0f0; background: #2e7d32; }
+        
+        .inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        #sell-mode-btn { font-size: 10px; padding: 10px; }
+        #sell-mode-btn.active { background: #d32f2f; border-color: #ff6666 #8b0000 #8b0000 #ff6666; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* MENU TORRE */
+        .stat-row { display: flex; justify-content: space-between; font-size: 10px; margin: 5px 0; border-bottom: 1px dashed #555; padding-bottom: 2px; }
+        .tower-actions { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+
+        /* LOJA */
+        .shop-split { display: flex; gap: 20px; justify-content: center; margin-bottom: 10px; }
+        .shop-box { width: 140px; padding: 10px; cursor: pointer; transition: 0.2s; background: #3e2723; border: 4px solid #2d1b18; border-radius: 8px; }
+        .shop-box:hover { background: #4e342e; transform: translateY(-3px); }
+        .shop-box.elite { border-color: gold; background: #5d4037; }
+        .rates-container { background: #222; padding: 10px; margin: 10px 0; font-size: 8px; text-align: left; border: 2px solid #444; font-family: monospace; }
+        .rate-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed #333; }
+        
+        .rarity-common { color: #fff; } .rarity-uncommon { color: #88f; } .rarity-rare { color: var(--rare); }
+        .rarity-epic { color: var(--epic); } .rarity-hard { color: var(--hard); }
+        .rarity-extreme { color: var(--extreme); animation: rainbow 1s infinite steps(4); }
+        @keyframes rainbow { 0%{color:#f00;} 20%{color:#ff0;} 40%{color:#0f0;} 60%{color:#0ff;} 80%{color:#00f;} 100%{color:#f0f;} }
+
+        .toast { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); background: #000; color: #fff; padding: 15px 20px; border: 4px solid #fff; font-size: 12px; pointer-events: none; animation: fadeUp 3s forwards; z-index: 200; width: max-content; text-align: center; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); }
+        @keyframes fadeUp { 0% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -50px; } }
+        .boss-warning { animation: shake 0.5s infinite; color: red; font-size: 20px; border-color: red; background: #200; }
+        @keyframes shake { 0% { transform: translate(-50%, -50%) rotate(0deg); } 25% { transform: translate(-52%, -50%) rotate(-2deg); } 75% { transform: translate(-48%, -50%) rotate(2deg); } 100% { transform: translate(-50%, -50%) rotate(0deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1>🧟 Zombie Defense<br><small>Pixel Market</small></h1>
+        <button class="btn-main" onclick="Game.start()">JOGAR</button>
+        <div style="display:flex;">
+            <button class="btn-main btn-sec" onclick="UI.openInventory()">MOCHILA</button>
+            <button class="btn-main btn-sec" onclick="UI.openShop()">LOJA</button>
+        </div>
+        <p style="margin-top:20px; font-size: 14px; color: gold;">COFRE: $<span id="total-money">0</span></p>
+    </div>
+
+    <div id="game-screen">
+        <canvas id="canvas"></canvas>
+        <div id="ui-layer">
+            <div class="top-bar pixel-box">
+                <div class="res-box" style="color:#ff4444">❤ <span id="hp-val">100</span></div>
+                <div class="res-box" style="color:#ffd700">WAVE <span id="wave-val">1</span></div>
+                <div class="res-box" style="color:#4caf50">$ <span id="money-val">500</span></div>
+                <div class="res-box" style="color:white">KILLS <span id="kill-val">0</span>/5</div>
+                <button onclick="Game.quit()" style="margin-left:auto; background:#d32f2f; color:white; border:2px solid white; cursor:pointer; padding: 5px; font-family:'Press Start 2P'; font-size:8px;">SAIR</button>
+            </div>
+            <div style="position:absolute; top: 60px; right: 10px;" class="auto-container">
+                <label class="auto-wave-box"><input type="checkbox" id="chk-auto-wave"> AUTO</label>
+                <div id="timer-display" class="timer-display">15.0</div>
+            </div>
+            <button id="btn-wave" onclick="Game.forceNextWave()">NEXT<br>WAVE</button>
+            <div class="bottom-bar" id="loadout-container"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-inv" class="modal">
+        <div class="modal-content pixel-box">
+            <div class="inv-header">
+                <h2 style="margin:0; font-size:14px;">MOCHILA</h2>
+                <button id="sell-mode-btn" class="btn-main btn-sec" onclick="UI.toggleSellMode()">MODO VENDER: OFF</button>
+            </div>
+            <div class="grid" id="inv-grid"></div>
+            <button class="btn-main" onclick="document.getElementById('modal-inv').style.display='none'">FECHAR</button>
+        </div>
+    </div>
+
+    <div id="modal-shop" class="modal">
+        <div class="modal-content pixel-box" style="text-align: center;">
+            <h2 style="font-size:16px;">MERCADÃO</h2>
+            <div class="shop-split">
+                <div class="shop-box" onclick="Game.selectChest('standard')" id="chest-standard">
+                    <div style="font-size:30px">📦</div><h3 style="font-size:10px;">COMUM</h3><p style="color:#gold; font-size:10px;">$200</p>
+                </div>
+                <div class="shop-box elite" onclick="Game.selectChest('elite')" id="chest-elite">
+                    <div style="font-size:30px">👑</div><h3 style="font-size:10px;">ELITE</h3><p style="color:#gold; font-size:10px;">$1000</p>
+                </div>
+            </div>
+            <div id="rates-display" class="rates-container"><p style="text-align:center; color:#888;">SELECIONE UM BAU</p></div>
+            <button id="btn-buy" class="btn-main" style="background:#444; cursor:not-allowed" disabled onclick="Game.buySelectedChest()">COMPRAR</button>
+            <p id="shop-msg" style="color: yellow; min-height: 20px; font-size:10px;"></p>
+            <button class="btn-main btn-sec" onclick="document.getElementById('modal-shop').style.display='none'">FECHAR</button>
+        </div>
+    </div>
+
+    <div id="modal-tower" class="modal">
+        <div class="modal-content pixel-box" style="width: 300px;">
+            <h2 id="tm-name" style="text-align:center; margin-top:0; color: gold;">NOME TORRE</h2>
+            <div id="tower-stats" style="margin: 20px 0;"></div>
+            <div class="tower-actions">
+                <button id="tm-btn-upgrade" class="btn-main" onclick="Game.upgradeCurrentTower()">UPGRADE</button>
+                <button id="tm-btn-sell" class="btn-main btn-danger" onclick="Game.sellCurrentTower()">VENDER</button>
+            </div>
+            <button class="btn-main btn-sec" style="margin-top:10px;" onclick="document.getElementById('modal-tower').style.display='none'">CANCELAR</button>
+        </div>
+    </div>
+
+<script>
+/* DADOS DOS INIMIGOS E TROPAS */
+const ENEMIES_DATA = [
+    { minWave: 1, name: "Zumbi Lento", hpMult: 0.8, speed: 0.6, emoji: "🧟" },
+    { minWave: 10, name: "Corredor", hpMult: 0.6, speed: 2.5, emoji: "🏃‍♂️" },
+    { minWave: 20, name: "Carniça", hpMult: 1.5, speed: 0.8, emoji: "🧟‍♂️" },
+    { minWave: 30, name: "Roedor", hpMult: 0.3, speed: 3.5, emoji: "🐀" },
+    { minWave: 40, name: "Mutante", hpMult: 4.0, speed: 0.5, emoji: "🤢" },
+    { minWave: 50, name: "Esqueleto", hpMult: 1.2, speed: 1.8, emoji: "💀" },
+    { minWave: 60, name: "Diabrete", hpMult: 0.6, speed: 4.0, emoji: "👿" },
+    { minWave: 70, name: "Golem", hpMult: 6.0, speed: 0.6, emoji: "🪨" },
+    { minWave: 80, name: "Ave", hpMult: 0.8, speed: 3.0, emoji: "🦅" },
+    { minWave: 90, name: "Carniçal", hpMult: 8.0, speed: 0.4, emoji: "👹" },
+    { minWave: 100, name: "Corruptor", hpMult: 5.0, speed: 1.2, emoji: "☣️" },
+    { minWave: 110, name: "Titã", hpMult: 15.0, speed: 0.3, emoji: "🦖" }
+];
+
+const TROOPS_BASE = [
+    { id: 1, name: "Soldado", rarity: "Comum", dmg: 10, range: 120, speed: 1.0, color: '#fff', emoji: "🔫" },
+    { id: 2, name: "Arqueiro", rarity: "Comum", dmg: 8, range: 140, speed: 0.6, color: '#fff', emoji: "🏹" },
+    { id: 3, name: "Goblin", rarity: "Comum", dmg: 5, range: 90, speed: 0.4, color: '#8d8', emoji: "👺" },
+    { id: 4, name: "Zumbi", rarity: "Comum", dmg: 12, range: 50, speed: 1.2, color: '#595', emoji: "🧟" },
+    { id: 5, name: "Pedreiro", rarity: "Comum", dmg: 20, range: 100, speed: 2.0, color: '#aaa', emoji: "🪨" },
+    { id: 6, name: "Ninja", rarity: "Incomum", dmg: 18, range: 100, speed: 0.9, color: '#aaf', emoji: "🌫️" },
+    { id: 7, name: "Lobo", rarity: "Incomum", dmg: 15, range: 60, speed: 0.5, color: '#aaf', emoji: "🐺" },
+    { id: 8, name: "Druida", rarity: "Incomum", dmg: 22, range: 160, speed: 1.8, color: '#4d4', emoji: "🍃" },
+    { id: 9, name: "Sniper", rarity: "Incomum", dmg: 14, range: 130, speed: 0.8, color: '#8d8', emoji: "🔫" },
+    { id: 10, name: "Paladino", rarity: "Rara", dmg: 35, range: 80, speed: 1.2, color: '#0070dd', emoji: "🛡️" },
+    { id: 11, name: "Vampiro", rarity: "Rara", dmg: 25, range: 180, speed: 0.7, color: '#0070dd', emoji: "🦇" },
+    { id: 12, name: "Elemental", rarity: "Rara", dmg: 30, range: 140, speed: 1.5, color: '#0070dd', emoji: "💧" },
+    { id: 13, name: "Colosso", rarity: "Épica", dmg: 60, range: 100, speed: 2.5, color: '#b026ff', emoji: "🗿" },
+    { id: 14, name: "Ifrit", rarity: "Épica", dmg: 70, range: 150, speed: 1.8, color: '#ff4400', emoji: "🔥" },
+    { id: 15, name: "Dragão", rarity: "Difícil", dmg: 150, range: 220, speed: 2.5, color: '#ff0033', emoji: "🐉" },
+    { id: 16, name: "General", rarity: "Difícil", dmg: 120, range: 180, speed: 1.0, color: '#ff0033', emoji: "👹" },
+    { id: 17, name: "Arcanjo", rarity: "Extrema", dmg: 400, range: 300, speed: 2.0, color: '#00ffff', emoji: "👼" },
+    { id: 18, name: "Cthulhu", rarity: "Extrema", dmg: 666, range: 400, speed: 3.5, color: '#00ffff', emoji: "🐙" }
+];
+
+const SELL_PRICES = { "Comum": 50, "Incomum": 100, "Rara": 300, "Épica": 800, "Difícil": 2000, "Extrema": 5000 };
+const RATES = { standard: { "Comum": 68, "Incomum": 27, "Rara": 4, "Épica": 0.9, "Difícil": 0.1, "Extrema": 0 }, elite: { "Comum": 5, "Incomum": 20, "Rara": 40, "Épica": 25, "Difícil": 8, "Extrema": 2 } };
+const Player = { money: 1000, inventory: [1, 2], loadout: [1, 2] };
+
+/* --- RENDER --- */
+const Render = {
+    decorations: [],
+    generateDecorations(width, height, path) {
+        this.decorations = [];
+        for(let i=0; i<3000; i++) this.decorations.push({ type: 'grass', x: Math.random() * width, y: Math.random() * height, color: Math.random() > 0.5 ? "#4c8e3e" : "#5da14e", size: Math.random() * 4 + 2 });
+        const props = ["🌲", "🌳", "🌳", "🪨", "🌿", "🌼"];
+        for(let i=0; i<80; i++) {
+            let x = Math.random() * width; let y = Math.random() * height;
+            // Check collision with path segments
+            let onPath = false;
+            for(let j=0; j<path.length-1; j++) {
+                if(distToSegment({x,y}, path[j], path[j+1]) < 70) { onPath = true; break; }
+            }
+            if(!onPath) {
+                this.decorations.push({ type: 'prop', x: x, y: y, emoji: props[Math.floor(Math.random() * props.length)], scale: 0.8 + Math.random() * 0.5 });
+            }
+        }
+    },
+    drawMap(ctx, width, height, path) {
+        ctx.fillStyle = "#3e7a36"; ctx.fillRect(0,0, width, height);
+        this.decorations.forEach(d => { if(d.type === 'grass') { ctx.fillStyle = d.color; ctx.fillRect(d.x, d.y, d.size, d.size); } });
+        
+        ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.lineWidth = 66; ctx.strokeStyle = "#5d4037"; ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y); for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y); ctx.stroke();
+        ctx.lineWidth = 56; ctx.strokeStyle = "#795548"; ctx.stroke();
+        ctx.lineWidth = 4; ctx.strokeStyle = "#8d6e63"; ctx.setLineDash([20, 30]); ctx.stroke(); ctx.setLineDash([]);
+        
+        this.decorations.forEach(d => { 
+            if(d.type === 'prop') { 
+                ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(d.x, d.y+5, 15*d.scale, 8*d.scale, 0, 0, Math.PI*2); ctx.fill(); 
+                ctx.font = Math.floor(30 * d.scale) + "px Arial"; 
+                ctx.textAlign = "center"; ctx.textBaseline = "bottom"; ctx.fillText(d.emoji, d.x, d.y + 10); 
+            } 
+        });
+        
+        let end = path[path.length-1]; ctx.font = "50px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🏰", end.x, end.y);
+    }
+};
+
+/* --- CLASSES --- */
+class Particle {
+    constructor(x, y, color) { this.x = x; this.y = y; this.color = color; const angle = Math.random() * 6.28; const speed = Math.random() * 3 + 1; this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed; this.life = 1.0; this.decay = 0.05 + Math.random() * 0.05; this.size = Math.random() * 6 + 2; }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= this.decay; return this.life > 0; }
+    draw(ctx) { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1; }
+}
+class FloatingText {
+    constructor(x, y, text, color) { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; this.yOffset = 0; }
+    update() { this.yOffset -= 1.0; this.life -= 0.02; return this.life > 0; }
+    draw(ctx) { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.font = "10px 'Press Start 2P'"; ctx.strokeStyle = "black"; ctx.lineWidth = 4; ctx.strokeText(this.text, this.x, this.y + this.yOffset); ctx.fillText(this.text, this.x, this.y + this.yOffset); ctx.globalAlpha = 1; }
+}
+
+/* --- GAME ENGINE --- */
+const Game = {
+    canvas: document.getElementById('canvas'),
+    ctx: document.getElementById('canvas').getContext('2d'),
+    width: 0, height: 0, active: false,
+    match: { hp: 100, money: 400, wave: 0, enemies: [], towers: [], projectiles: [], particles: [], floatingTexts: [], spawning: false, spawnTimer: 0, enemiesLeftToSpawn: 0, autoTimer: 15.0, timerRunning: false, killedInWave: 0 },
+    path: [], selectedTroopId: null, currentInteractTower: null,
+
+    init() {
+        this.ctx.imageSmoothingEnabled = false;
+        this.resize(); window.addEventListener('resize', () => this.resize());
+        this.canvas.addEventListener('mousedown', e => this.onClick(e));
+        this.canvas.addEventListener('touchstart', e => this.onClick(e.touches[0]));
+        requestAnimationFrame(() => this.loop());
+        UI.updateMenu();
+    },
+
+    resize() {
+        this.width = this.canvas.width = window.innerWidth;
+        this.height = this.canvas.height = window.innerHeight;
+        const w = this.width, h = this.height;
+        this.path = [ {x:0, y:h*0.2}, {x:w*0.8, y:h*0.2}, {x:w*0.8, y:h*0.8}, {x:w*0.2, y:h*0.8}, {x:w*0.2, y:h*0.5}, {x:w*0.5, y:h*0.5} ];
+        Render.generateDecorations(this.width, this.height, this.path);
+    },
+
+    start() {
+        if(Player.loadout.length === 0) { alert("Equipe vazia!"); return; }
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        this.match = { hp: 100, money: 450, wave: 0, enemies: [], towers: [], projectiles: [], particles: [], floatingTexts: [], spawning: false, spawnTimer: 0, enemiesLeftToSpawn: 0, autoTimer: 15.0, timerRunning: false, killedInWave: 0 };
+        this.active = true;
+        this.resize(); UI.updateHUD(); UI.renderLoadout();
+        UI.toast("START!");
+    },
+
+    quit() { this.active = false; document.getElementById('menu-screen').style.display = 'flex'; document.getElementById('game-screen').style.display = 'none'; UI.updateMenu(); },
+
+    forceNextWave() {
+        this.match.wave++; this.match.killedInWave = 0; UI.updateHUD(); 
+        let newEnemies = 5 + Math.floor(this.match.wave * 2.5);
+        this.match.enemiesLeftToSpawn += newEnemies;
+        this.match.spawning = true; this.match.autoTimer = 15.0; this.match.timerRunning = true; 
+        UI.toast(`WAVE ${this.match.wave}`);
+    },
+
+    loop() {
+        Render.drawMap(this.ctx, this.width, this.height, this.path);
+        if(this.active) { this.update(); this.drawEntities(); }
+        requestAnimationFrame(() => this.loop());
+    },
+
+    update() {
+        const dt = 1/60;
+        const autoEnabled = document.getElementById('chk-auto-wave').checked;
+        if (this.match.timerRunning) {
+            this.match.autoTimer -= dt; if(this.match.autoTimer < 0) this.match.autoTimer = 0;
+            document.getElementById('timer-display').innerText = this.match.autoTimer.toFixed(1) + "s";
+            if (this.match.autoTimer <= 0) { if (autoEnabled) this.forceNextWave(); else { document.getElementById('timer-display').innerText = "RDY"; this.match.timerRunning = false; } }
+        } else { if(this.match.wave > 0) document.getElementById('timer-display').innerText = "RDY"; }
+
+        if (this.match.spawning && this.match.enemiesLeftToSpawn > 0) {
+            this.match.spawnTimer += dt;
+            let spawnRate = Math.max(0.2, 1.0 - (this.match.wave * 0.05));
+            if (this.match.spawnTimer > spawnRate) { this.spawnEnemy(); this.match.spawnTimer = 0; this.match.enemiesLeftToSpawn--; }
+        }
+
+        for (let i = this.match.enemies.length - 1; i >= 0; i--) {
+            let e = this.match.enemies[i];
+            let target = this.path[e.wp + 1];
+            if (!target) { 
+                this.match.hp -= 10; if(e.isBoss) this.match.hp -= 50; 
+                Game.spawnParticles(e.x, e.y, 'red', 10);
+                this.match.enemies.splice(i, 1);
+                UI.updateHUD();
+                if(this.match.hp <= 0) { alert("GAME OVER!"); this.quit(); }
+                this.checkEndOfWave(); continue;
+            }
+            let dx = target.x - e.x, dy = target.y - e.y;
+            let dist = Math.hypot(dx, dy);
+            if (dist < e.speed) { e.x = target.x; e.y = target.y; e.wp++; }
+            else { e.x += (dx/dist)*e.speed; e.y += (dy/dist)*e.speed; }
+        }
+
+        const now = Date.now();
+        this.match.towers.forEach(t => {
+            if(t.recoil > 0) t.recoil -= 0.1;
+            if (now - t.lastShot > (t.stats.speed * 1000)) {
+                let target = this.match.enemies.find(e => Math.hypot(e.x - t.x, e.y - t.y) <= t.stats.range);
+                if (target) {
+                    this.match.projectiles.push({ x: t.x, y: t.y, tx: target.x, ty: target.y, target: target, dmg: t.stats.dmg, color: t.data.color, active: true });
+                    t.lastShot = now; t.recoil = 1;
+                }
+            }
+        });
+
+        for(let i=this.match.projectiles.length-1; i>=0; i--) {
+            let p = this.match.projectiles[i];
+            if(p.active) {
+                let dx = p.tx - p.x, dy = p.ty - p.y;
+                let dist = Math.hypot(dx, dy);
+                if(dist < 20) { p.x = p.tx; p.y = p.ty; } 
+                else { p.x += dx * 0.4; p.y += dy * 0.4; }
+                if(Math.hypot(p.tx - p.x, p.ty - p.y) < 20) {
+                    if(this.match.enemies.includes(p.target)) {
+                        p.target.hp -= p.dmg; Game.spawnParticles(p.x, p.y, p.color, 3);
+                        Game.spawnFloatingText(p.x, p.y-20, Math.floor(p.dmg), "#fff");
+                        if(p.target.hp <= 0) {
+                            let idx = this.match.enemies.indexOf(p.target);
+                            if(idx > -1) {
+                                Game.spawnParticles(p.target.x, p.target.y, "#0f0", 15);
+                                if(p.target.isBoss) { Game.spawnParticles(p.target.x, p.target.y, "purple", 50); this.match.money += 300; }
+                                this.match.enemies.splice(idx, 1); this.match.money += 15; this.match.killedInWave++;
+                                UI.updateHUD(); this.checkEndOfWave();
+                            }
+                        }
+                    }
+                    p.active = false;
+                }
+            }
+        }
+        this.match.particles = this.match.particles.filter(p => p.update());
+        this.match.floatingTexts = this.match.floatingTexts.filter(t => t.update());
+    },
+
+    checkEndOfWave() {
+        if(this.match.enemies.length === 0 && this.match.enemiesLeftToSpawn === 0) {
+            if(!this.match.waveClearedFlag) {
+                this.match.waveClearedFlag = true;
+                if(this.match.killedInWave >= 5) { this.match.money += 100; Player.money += 100; UI.toast(`CLEAR! +$100`); UI.updateHUD(); }
+                else UI.toast(`CLEAR!`);
+            }
+        } else this.match.waveClearedFlag = false;
+    },
+
+    spawnEnemy() {
+        let isBoss = (this.match.wave % 10 === 0) && (this.match.enemiesLeftToSpawn === 1);
+        let data; let size = 30;
+        if (isBoss) { data = { name: "CHEFÃO", hpMult: 20, speed: 0.8, emoji: "👑" }; size = 80; UI.toast("!!! BOSS !!!"); let el = document.createElement('div'); el.className = 'boss-warning toast'; el.innerText = "BOSS FIGHT!!"; document.body.appendChild(el); setTimeout(() => el.remove(), 2000); } 
+        else {
+            let available = ENEMIES_DATA.filter(e => e.minWave <= this.match.wave);
+            if(available.length === 0) available = [ENEMIES_DATA[0]];
+            data = available[Math.floor(Math.random() * available.length)];
+        }
+        let baseHp = 30 * Math.pow(1.15, this.match.wave);
+        this.match.enemies.push({ x: this.path[0].x, y: this.path[0].y, wp: 0, hp: baseHp * data.hpMult, maxHp: baseHp * data.hpMult, speed: data.speed, emoji: data.emoji, isBoss: isBoss, size: size, animOffset: Math.random() * 100 });
+    },
+    spawnParticles(x, y, color, count) { for(let i=0; i<count; i++) this.match.particles.push(new Particle(x, y, color)); },
+    spawnFloatingText(x, y, text, color) { this.match.floatingTexts.push(new FloatingText(x, y, text, color)); },
+
+    drawEntities() {
+        // Towers
+        this.match.towers.forEach(t => {
+            let scale = 1 + (t.recoil || 0) * 0.2;
+            this.ctx.fillStyle = "rgba(0,0,0,0.3)"; this.ctx.beginPath(); this.ctx.ellipse(t.x, t.y+10, 20, 10, 0, 0, Math.PI*2); this.ctx.fill();
+            if(t.data.id === this.selectedTroopId || Math.hypot(t.x - this.lastMouseX, t.y - this.lastMouseY) < 30) {
+                this.ctx.beginPath(); this.ctx.strokeStyle = "rgba(255,255,255,0.5)"; this.ctx.setLineDash([5,5]); this.ctx.lineWidth = 2; this.ctx.arc(t.x, t.y, t.stats.range, 0, Math.PI*2); this.ctx.stroke(); this.ctx.setLineDash([]);
+            }
+            this.ctx.save(); this.ctx.translate(t.x, t.y); this.ctx.scale(scale, scale);
+            this.ctx.font = "40px Arial"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "middle"; 
+            this.ctx.fillText(t.data.emoji, 0, -10);
+            this.ctx.restore();
+            this.ctx.fillStyle = "#000"; this.ctx.fillRect(t.x+10, t.y+10, 20, 14); this.ctx.fillStyle = "#fff"; this.ctx.font = "10px 'Press Start 2P'"; this.ctx.fillText(t.level, t.x+20, t.y+20);
+        });
+
+        // Enemies
+        const time = Date.now() / 100;
+        this.match.enemies.forEach(e => {
+            let jump = Math.abs(Math.sin(time * (e.speed/2) + e.animOffset)) * 10;
+            this.ctx.fillStyle = "rgba(0,0,0,0.4)"; this.ctx.beginPath(); this.ctx.ellipse(e.x, e.y, e.size/2, e.size/4, 0, 0, Math.PI*2); this.ctx.fill();
+            this.ctx.save(); this.ctx.translate(e.x, e.y - jump); if(e.isBoss) this.ctx.rotate(Math.sin(time)*0.05);
+            this.ctx.font = Math.floor(e.size) + "px Arial"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "bottom"; 
+            this.ctx.fillText(e.emoji, 0, 10);
+            this.ctx.restore();
+            let w = e.size; let hpPct = e.hp/e.maxHp;
+            this.ctx.fillStyle = "#000"; this.ctx.fillRect(e.x - w/2 - 2, e.y - e.size - 12, w + 4, 10);
+            this.ctx.fillStyle = e.isBoss ? "#b026ff" : (hpPct > 0.5 ? "#0f0" : "#f00"); this.ctx.fillRect(e.x - w/2, e.y - e.size - 10, w * hpPct, 6);
+        });
+
+        // Projectiles
+        this.match.projectiles.forEach(p => { this.ctx.fillStyle = p.color || "yellow"; this.ctx.fillRect(p.x-3, p.y-3, 6, 6); });
+        this.match.particles.forEach(p => p.draw(this.ctx)); this.match.floatingTexts.forEach(t => t.draw(this.ctx));
+
+        // Ghost
+        if (this.selectedTroopId && this.lastMouseX) {
+            let tData = TROOPS_BASE.find(t => t.id === this.selectedTroopId);
+            let valid = this.isValidPos(this.lastMouseX, this.lastMouseY);
+            this.ctx.beginPath(); this.ctx.arc(this.lastMouseX, this.lastMouseY, tData.range, 0, Math.PI*2);
+            this.ctx.fillStyle = valid ? "rgba(0,255,0,0.2)" : "rgba(255,0,0,0.2)"; this.ctx.fill();
+            this.ctx.globalAlpha = 0.6; this.ctx.font = "40px Arial"; this.ctx.textAlign = "center"; this.ctx.textBaseline = "middle";
+            this.ctx.fillText(tData.emoji, this.lastMouseX, this.lastMouseY); this.ctx.globalAlpha = 1;
+        }
+    },
+
+    onClick(e) {
+        if (!this.active) return;
+        const rect = this.canvas.getBoundingClientRect(); const x = (e.clientX || e.touches[0].clientX) - rect.left; const y = (e.clientY || e.touches[0].clientY) - rect.top;
+        this.lastMouseX = x; this.lastMouseY = y;
+        if (this.selectedTroopId) {
+            if (this.isValidPos(x, y)) {
+                let data = TROOPS_BASE.find(t => t.id === this.selectedTroopId);
+                this.match.towers.push({ x: x, y: y, data: data, stats: {...data}, level: 1, lastShot: 0, recoil: 0, costSpent: 0 });
+                this.spawnParticles(x, y, '#fff', 10); this.selectedTroopId = null; UI.renderLoadout();
+            } else UI.toast("INVALIDO!");
+        } else {
+            let tower = this.match.towers.find(t => Math.hypot(t.x - x, t.y - y) < 30);
+            if(tower) { this.currentInteractTower = tower; UI.openTowerMenu(tower); }
+        }
+    },
+    
+    upgradeCurrentTower() {
+        let tower = this.currentInteractTower; if(!tower) return;
+        let cost = 50 * tower.level;
+        if(this.match.money >= cost) {
+            this.match.money -= cost; tower.level++; tower.stats.dmg = Math.floor(tower.stats.dmg * 1.4);
+            tower.costSpent = (tower.costSpent || 0) + cost; 
+            this.spawnParticles(tower.x, tower.y, 'gold', 20); UI.updateHUD(); UI.openTowerMenu(tower);
+        } else UI.toast(`FALTA $${cost}`);
+    },
+
+    sellCurrentTower() {
+        let tower = this.currentInteractTower; if(!tower) return;
+        let sellValue = 25 + Math.floor((tower.costSpent || 0) * 0.5); 
+        this.match.money += sellValue;
+        this.match.towers = this.match.towers.filter(t => t !== tower);
+        this.spawnParticles(tower.x, tower.y, 'red', 15);
+        this.spawnFloatingText(tower.x, tower.y, `+$${sellValue}`, 'gold');
+        UI.updateHUD(); document.getElementById('modal-tower').style.display = 'none'; this.currentInteractTower = null;
+    },
+
+    onMove(e) { const rect = this.canvas.getBoundingClientRect(); this.lastMouseX = (e.clientX || e.touches[0].clientX) - rect.left; this.lastMouseY = (e.clientY || e.touches[0].clientY) - rect.top; },
+    isValidPos(x, y) { for (let i = 0; i < this.path.length - 1; i++) { if (distToSegment({x, y}, this.path[i], this.path[i+1]) < 60) return false; } for (let t of this.match.towers) { if (Math.hypot(t.x - x, t.y - y) < 50) return false; } return true; }
+};
+
+window.addEventListener('mousemove', e => Game.onMove(e)); window.addEventListener('touchmove', e => Game.onMove(e));
+
+/* --- UI MANIPULATION --- */
+const UI = {
+    sellMode: false,
+    updateMenu() { document.getElementById('total-money').innerText = Player.money; },
+    updateHUD() { document.getElementById('hp-val').innerText = Math.floor(Game.match.hp); document.getElementById('wave-val').innerText = Game.match.wave; document.getElementById('money-val').innerText = Math.floor(Game.match.money); const kEl = document.getElementById('kill-val'); kEl.innerText = Game.match.killedInWave; kEl.parentElement.style.color = Game.match.killedInWave >= 5 ? '#0f0' : 'white'; },
+    renderLoadout() { const div = document.getElementById('loadout-container'); div.innerHTML = ""; Player.loadout.forEach(id => { let t = TROOPS_BASE.find(x => x.id === id); let el = document.createElement('div'); el.className = "troop-card " + (Game.selectedTroopId === id ? "selected" : ""); el.innerHTML = `<div class="troop-icon">${t.emoji}</div><div class="troop-name">${t.name}</div>`; el.onclick = (e) => { e.stopPropagation(); Game.selectedTroopId = (Game.selectedTroopId === id) ? null : id; UI.renderLoadout(); }; div.appendChild(el); }); },
+    toggleSellMode() { this.sellMode = !this.sellMode; const btn = document.getElementById('sell-mode-btn'); if(this.sellMode) { btn.innerText = "MODO VENDER: ON"; btn.classList.add('active'); } else { btn.innerText = "MODO VENDER: OFF"; btn.classList.remove('active'); } this.openInventory(); },
+    openInventory() { document.getElementById('modal-inv').style.display = 'flex'; const grid = document.getElementById('inv-grid'); grid.innerHTML = ""; Player.inventory.forEach(id => { let t = TROOPS_BASE.find(x => x.id === id); let el = document.createElement('div'); el.className = "inv-card " + (Player.loadout.includes(id) ? "equipped" : ""); let color = t.color; if(t.rarity === 'Extrema') color = 'cyan'; let sellPrice = SELL_PRICES[t.rarity] || 0; let actionText = this.sellMode ? `<span style='color:red'>VENDER $${sellPrice}</span>` : t.name; el.innerHTML = `<div style="font-size:30px">${t.emoji}</div><div style="font-size:10px">${actionText}</div><small style="color:${color}; font-weight:bold; font-size:8px;">${t.rarity}</small>`; el.onclick = () => { if(this.sellMode) { if(confirm(`Vender ${t.name} por $${sellPrice}?`)) { Player.inventory.splice(Player.inventory.indexOf(id), 1); if(Player.loadout.includes(id)) { Player.loadout = Player.loadout.filter(x => x !== id); } Player.money += sellPrice; this.updateMenu(); this.openInventory(); } } else { if(Player.loadout.includes(id)) Player.loadout = Player.loadout.filter(x => x !== id); else { if(Player.loadout.length < 5) Player.loadout.push(id); else alert("Max 5!"); } this.openInventory(); } }; grid.appendChild(el); }); },
+    openTowerMenu(tower) { let modal = document.getElementById('modal-tower'); modal.style.display = 'flex'; document.getElementById('tm-name').innerText = tower.data.name; let cost = 50 * tower.level; let nextDmg = Math.floor(tower.stats.dmg * 1.4); let sellValue = 25 + Math.floor((tower.costSpent||0)*0.5); let statsHTML = `<div class="stat-row"><span>NIVEL</span> <span>${tower.level} ➜ ${tower.level+1}</span></div><div class="stat-row"><span>DANO</span> <span>${tower.stats.dmg} ➜ ${nextDmg}</span></div><div class="stat-row"><span>VELOCIDADE</span> <span>${tower.stats.speed.toFixed(2)}s</span></div>`; document.getElementById('tower-stats').innerHTML = statsHTML; document.getElementById('tm-btn-upgrade').innerText = `UPGRADE $${cost}`; document.getElementById('tm-btn-sell').innerText = `VENDER $${sellValue}`; },
+    openShop() { document.getElementById('modal-shop').style.display = 'flex'; UI.updateMenu(); Game.selectedChestType = null; document.getElementById('rates-display').innerHTML='<p style="text-align:center; color:#888;">SELECIONE...</p>'; document.getElementById('btn-buy').style.background='#444'; document.getElementById('btn-buy').disabled = true; },
+    toast(msg) { let el = document.createElement('div'); el.className = 'toast'; el.innerText = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2500); }
+};
+
+Game.selectedChestType = null;
+Game.selectChest = function(type) { this.selectedChestType = type; document.getElementById('chest-standard').style.border = type === 'standard' ? '4px solid #fff' : '4px solid #2d1b18'; document.getElementById('chest-elite').style.border = type === 'elite' ? '4px solid #fff' : '4px solid gold'; let btn = document.getElementById('btn-buy'); btn.disabled = false; btn.style.background = type === 'elite' ? 'gold' : '#d32f2f'; btn.style.color = type === 'elite' ? '#000' : '#fff'; btn.innerText = `COMPRAR ($${type === 'standard' ? 200 : 1000})`; let rates = RATES[type]; let html = `<strong>CHANCES (${type.toUpperCase()}):</strong><br>`; for(let r in rates) { let className = 'rarity-common'; if(r === 'Incomum') className = 'rarity-uncommon'; if(r === 'Rara') className = 'rarity-rare'; if(r === 'Épica') className = 'rarity-epic'; if(r === 'Difícil') className = 'rarity-hard'; if(r === 'Extrema') className = 'rarity-extreme'; if(rates[r] > 0) html += `<div class="rate-row"><span class="${className}">${r}</span><span>${rates[r]}%</span></div>`; } document.getElementById('rates-display').innerHTML = html; };
+Game.buySelectedChest = function() { if(!this.selectedChestType) return; let cost = this.selectedChestType === 'standard' ? 200 : 1000; if(Player.money >= cost) { Player.money -= cost; let pool = RATES[this.selectedChestType]; let rand = Math.random() * 100; let selectedRarity = "Comum"; let sum = 0; for(let r in pool) { sum += pool[r]; if(rand <= sum) { selectedRarity = r; break; } } let troopsOfRarity = TROOPS_BASE.filter(t => t.rarity === selectedRarity); if(troopsOfRarity.length === 0) troopsOfRarity = TROOPS_BASE; let chosen = troopsOfRarity[Math.floor(Math.random() * troopsOfRarity.length)]; let msgEl = document.getElementById('shop-msg'); if(!Player.inventory.includes(chosen.id)) { Player.inventory.push(chosen.id); msgEl.innerHTML = `GANHOU: <span style="color:${chosen.color}; font-weight:bold;">${chosen.name}</span> (${chosen.rarity})!`; if(chosen.rarity === 'Extrema') UI.toast("EXTREMA!!!"); } else { msgEl.innerHTML = `REPETIDO: <span style="color:${chosen.color}">${chosen.name}</span>`; msgEl.style.color = "#ccc"; } UI.updateMenu(); } else { document.getElementById('shop-msg').innerText = "SEM GRANA!"; document.getElementById('shop-msg').style.color = "#f44"; } };
+function distToSegment(p, v, w) { var l2 = (v.x - w.x)**2 + (v.y - w.y)**2; if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y); var t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2; t = Math.max(0, Math.min(1, t)); return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y))); }
+Game.init();
+</script>
+</body>
+</html>
